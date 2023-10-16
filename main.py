@@ -13,5 +13,6 @@ im = read_tiff(PATH)
 im = isotropic_interpolation(im)
 
 for i in range(len(im)):
+    # save_image(im[i], f'results/non_seg_{i}.png')
     segmentated = segmentation(im[i])
     save_image(segmentated, f'results/seg_{i}.png')

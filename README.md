@@ -1,1 +1,2 @@
-# Segmentation-Candida
+# Segmentacion del hongo Candida
+

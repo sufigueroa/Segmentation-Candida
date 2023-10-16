@@ -72,10 +72,17 @@ def denoise(img):
     # img_dilation = cv2.dilate(img, k_dilation) 
     # img_erosion = cv2.erode(img_dilation, k_erosion)
     k_erosion = np.ones((3,3), np.uint8) 
-    k_dilation = np.ones((9,9), np.uint8) 
-    img_erosion = cv2.erode(img, k_erosion)
+    k_dilation = np.ones((15,15), np.uint8) 
+    img_dilation = cv2.dilate(img, k_erosion) 
+    img_erosion = cv2.erode(img_dilation, k_erosion)
     img_dilation = cv2.dilate(img_erosion, k_dilation) 
-    return img_dilation
+    img_erosion = cv2.erode(img_dilation, np.ones((9,9), np.uint8) )
+
+    # k_erosion = np.ones((3,3), np.uint8) 
+    # k_dilation = np.ones((9,9), np.uint8) 
+    # img_erosion = cv2.erode(img, k_erosion)
+    # img_dilation = cv2.dilate(img_erosion, k_dilation) 
+    return img_erosion
 
 def segmentation(img):
     segmented = initial_segmentation(img, 40)
