@@ -6,6 +6,11 @@ import cv2
 from skspatial.objects import Line, Plane, Vector
 from scipy.interpolate import interp1d
 from scipy.interpolate import RegularGridInterpolator
+from skimage.measure import label, regionprops
+from skimage.color import label2rgb
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 
 ###################################################
@@ -27,6 +32,10 @@ def read_tiff(path):
 
 def save_image(img, path):
     img = Image.fromarray(np.uint8(img), 'L')
+    img.save(path)
+
+def save_rgb_image(img, path):
+    img = Image.fromarray(np.uint8(img), 'RGB')
     img.save(path)
 
 def save_video(frames, path):
@@ -67,29 +76,78 @@ def initial_segmentation(img, umbral):
     return segmented.astype(np.uint8)
 
 def denoise(img):
-    # k_erosion = np.ones((6, 6), np.uint8) 
-    # k_dilation = np.ones((9,9), np.uint8) 
-    # img_dilation = cv2.dilate(img, k_dilation) 
-    # img_erosion = cv2.erode(img_dilation, k_erosion)
-    k_erosion = np.ones((3,3), np.uint8) 
-    k_dilation = np.ones((15,15), np.uint8) 
-    img_dilation = cv2.dilate(img, k_erosion) 
-    img_erosion = cv2.erode(img_dilation, k_erosion)
-    img_dilation = cv2.dilate(img_erosion, k_dilation) 
-    img_erosion = cv2.erode(img_dilation, np.ones((9,9), np.uint8) )
+    k_first_erosion            = np.ones((3,3), np.uint8) 
+    k_first_dilation           = np.ones((2,2), np.uint8) 
+    k_second_dilation          = np.ones((15,15), np.uint8) 
+    k_second_erosion           = np.ones((9,9), np.uint8) 
 
-    # k_erosion = np.ones((3,3), np.uint8) 
-    # k_dilation = np.ones((9,9), np.uint8) 
-    # img_erosion = cv2.erode(img, k_erosion)
-    # img_dilation = cv2.dilate(img_erosion, k_dilation) 
+    img_dilation = cv2.dilate(img, k_first_dilation) 
+    img_erosion = cv2.erode(img, k_first_erosion)
+    img_dilation = cv2.dilate(img_erosion, k_second_dilation) 
+    img_erosion = cv2.erode(img_dilation, k_second_erosion)
     return img_erosion
 
-def segmentation(img):
-    segmented = initial_segmentation(img, 40)
-    denoised = denoise(segmented)
-    return denoised
+def get_mask(index, matrix):
+    neigh = []
+    offset = 8
+    indexes = [i for i in range(index - offset, index + offset) if i >= 0 and i < len(matrix)]
+    for ind in indexes:
+        segmented = initial_segmentation(matrix[ind], 40)
+        denoised = denoise(segmented)
+        neigh.append(denoised)
+    
+    neigh = np.array(neigh)
+    return np.logical_or.reduce(neigh)*255
 
-def histograa():
+def segmentation(index, matrix, save=True):
+    if save: save_image(matrix[index], f'results/normal_{index}.png')
+    mask = get_mask(index, matrix)
+    if save: save_image(mask, f'results/mask_{index}.png')
+    col = identify(mask, index, save)
+    # if save: save_rgb_image(col, f'results/col_{index}.png')
+    return mask
+
+def get_type(region):
+    # Si el area es menor a 300 es ruido
+    if region.area < 300:
+        return 0
+    # separamos esporas
+    elif region.area < 2500 and region.eccentricity < 0.8:
+        return 1
+    # separamos hifas
+    else:
+        return 2
+
+def identify(img, index, save):
+    # Obtiene los labels de las regiones
+    label_image = label(img)
+    # Le asigna color a los labels
+    colorized = label2rgb(label_image, image=img, bg_label=0)
+    colorized = equalize(colorized).astype(np.uint8)
+    if save: save_rgb_image(colorized, f'results/col_{index}.png')
+
+    # Separamos cada region segun que objeto representan
+    # 0 : Ruido
+    # 1 : Espora
+    # 2 : Hifa 
+    labels = {0 : [], 1: [], 2: []}
+    for region in regionprops(label_image):
+        tipo = get_type(region)
+        labels[tipo].append(region.label)
+    # Ahora que tenemos las zonas identificadas, las renombramos
+    separated = label_image.copy()
+    for tp in range(3):
+        for lbl in labels[tp]:
+            separated[label_image[:, :] == lbl] = tp
+
+    # Generamos la imagen a color
+    sep_colorized = label2rgb(separated, image=img, bg_label=0)
+    sep_colorized = equalize(sep_colorized).astype(np.uint8)
+    if save: save_rgb_image(sep_colorized, f'results/sep_{index}.png')
+
+    return sep_colorized
+
+def histograma():
     # flat = im[16].flatten()
 
     # flat = flat / flat.max() * 255
