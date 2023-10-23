@@ -9,10 +9,8 @@ from scipy.interpolate import RegularGridInterpolator
 from skimage.measure import label, regionprops
 from skimage.color import label2rgb
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-
+PATH = 'results/'
 ###################################################
 ### Funciones Generales
 ###################################################
@@ -100,11 +98,10 @@ def get_mask(index, matrix):
     return np.logical_or.reduce(neigh)*255
 
 def segmentation(index, matrix, save=True):
-    if save: save_image(matrix[index], f'results/normal_{index}.png')
+    if save: save_image(matrix[index], f'{PATH}normal_{index}.png')
     mask = get_mask(index, matrix)
-    if save: save_image(mask, f'results/mask_{index}.png')
+    if save: save_image(mask, f'{PATH}mask_{index}.png')
     col = identify(mask, index, save)
-    # if save: save_rgb_image(col, f'results/col_{index}.png')
     return mask
 
 def get_type(region):
@@ -112,7 +109,7 @@ def get_type(region):
     if region.area < 300:
         return 0
     # separamos esporas
-    elif region.area < 2500 and region.eccentricity < 0.8:
+    elif region.area < 2000 or (region.area < 3000 and region.eccentricity < 0.8):
         return 1
     # separamos hifas
     else:
@@ -124,7 +121,7 @@ def identify(img, index, save):
     # Le asigna color a los labels
     colorized = label2rgb(label_image, image=img, bg_label=0)
     colorized = equalize(colorized).astype(np.uint8)
-    if save: save_rgb_image(colorized, f'results/col_{index}.png')
+    if save: save_rgb_image(colorized, f'{PATH}col_{index}.png')
 
     # Separamos cada region segun que objeto representan
     # 0 : Ruido
@@ -143,7 +140,7 @@ def identify(img, index, save):
     # Generamos la imagen a color
     sep_colorized = label2rgb(separated, image=img, bg_label=0)
     sep_colorized = equalize(sep_colorized).astype(np.uint8)
-    if save: save_rgb_image(sep_colorized, f'results/sep_{index}.png')
+    if save: save_rgb_image(sep_colorized, f'{PATH}sep_{index}.png')
 
     return sep_colorized
 

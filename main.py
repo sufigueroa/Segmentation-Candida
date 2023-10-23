@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from utils import *
 
 PATH = 'images/Low concentration 1.tiff'
+# PATH = 'images/Medium concentration 1.tiff'
+# PATH = 'images/High concentration 1.tiff'
+
 # Leer tiff y convertirlo en np.array
 im = read_tiff(PATH)
 
